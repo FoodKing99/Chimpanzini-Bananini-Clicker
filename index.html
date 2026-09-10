@@ -44,7 +44,7 @@ async function getScores(s){
     if(error) throw error;
     return data||[];
   }catch(e){
-    console.error('Leaderboard load failed:',e);
+    console.error('Leaderboard load failed:', e);
     return null;
   }
 }
@@ -68,8 +68,11 @@ async function saveScore(){
     await renderScores();
     resetReady();
   }catch(e){
-    console.error('Score submission failed:',e);
-    alert('Could not save your score online. Check your internet connection and Supabase setup.');
+    console.error('Score submission failed:', e);
+    const details = e && (e.message || e.error_description || e.details || e.hint)
+      ? [e.message, e.error_description, e.details, e.hint].filter(Boolean).join(' | ')
+      : String(e);
+    alert('Supabase score error:\n\n' + details);
   }finally{
     leaderboardLoading=false;
     saveBtn.disabled=false;
