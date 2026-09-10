@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chimpanzini Bananini — Banana Rush</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:#fff;background:#10200d}body{background:radial-gradient(circle at 50% 28%,#496b32,#13210f 68%);overflow-x:hidden}.wrap{width:min(1100px,96vw);margin:auto;text-align:center;padding:14px 0 30px}h1{font-size:clamp(28px,6vw,62px);margin:0;text-shadow:0 5px 0 #071005;letter-spacing:1px}.sub{opacity:.88;margin:3px 0 13px}.modes{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}.mode{border:2px solid #ffffff33;background:#172813;color:white;border-radius:14px;padding:10px 18px;font-weight:1000;font-size:17px;cursor:pointer}.mode.active{background:#d8efb6;color:#10200d;border-color:#fff}.status{display:flex;justify-content:center;gap:28px;align-items:center;margin:13px 0 6px;font-weight:1000}.timer{font-size:clamp(32px,5vw,48px)}.counter{font-size:clamp(24px,4vw,38px)}.arena{height:min(59vh,620px);min-height:390px;display:grid;place-items:center;position:relative}.bananaButton{width:min(450px,68vw);height:min(520px,60vh);min-height:350px;border:0;background:transparent;padding:0;cursor:pointer;filter:drop-shadow(0 25px 28px #000c);transition:transform .06s}.bananaButton:active,.hit{transform:scale(.94) rotate(-1deg)}.character{width:100%;height:100%;object-fit:contain;pointer-events:none;border-radius:24px}.tap{position:absolute;top:0;font-weight:1000;font-size:clamp(17px,2.5vw,26px);text-shadow:2px 2px #000}.float{position:absolute;font-size:29px;font-weight:1000;pointer-events:none;animation:float .7s ease-out forwards;text-shadow:3px 3px #000;z-index:4}@keyframes float{to{transform:translateY(-130px) scale(1.25);opacity:0}}.hint{opacity:.6;font-size:14px}.controls{margin:4px 0 18px}.start,.again{padding:12px 24px;border:0;border-radius:14px;font-size:18px;font-weight:1000;cursor:pointer}.start{background:#e7f4d2;color:#10200d}.leader{width:min(760px,94vw);margin:10px auto 0;text-align:left;background:#0b1209aa;border:2px solid #ffffff20;border-radius:20px;padding:17px}.leader h2{text-align:center;margin:0 0 10px}.tabs{display:flex;gap:7px;justify-content:center;margin-bottom:12px}.tab{border:1px solid #ffffff22;background:#172813;color:#fff;border-radius:10px;padding:7px 11px;cursor:pointer;font-weight:800}.tab.active{background:#d8efb6;color:#10200d}.row{display:grid;grid-template-columns:55px 1fr 100px;gap:8px;padding:8px;border-bottom:1px solid #ffffff12}.row:last-child{border:0}.rank{font-weight:1000}.score{text-align:right;font-weight:1000}.empty{text-align:center;opacity:.6;padding:12px}.overlay{position:fixed;inset:0;background:#030800e8;display:none;place-items:center;z-index:20;padding:20px}.card{width:min(760px,94vw);padding:28px 22px 34px;text-align:center;border:4px solid #e8f0df;border-radius:30px;background:linear-gradient(#2c4225,#111b0f);box-shadow:0 0 90px #ffffff2c;animation:pop .4s cubic-bezier(.2,1.5,.4,1)}@keyframes pop{from{transform:scale(.35);opacity:0}to{transform:scale(1);opacity:1}}.trophy{font-size:78px}.result{font-size:clamp(42px,8vw,72px);font-weight:1000}.nameInput{width:min(360px,85vw);padding:12px;border-radius:10px;border:2px solid #ffffff33;background:#0c130a;color:#fff;font-size:18px;text-align:center;margin:13px 0}.small{opacity:.75;font-size:14px}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body><div class="wrap">
+<h1>CHIMPANZINI BANANINI</h1><div class="sub">BANANA RUSH — CLICK AS MANY TIMES AS YOU CAN!</div>
+<div class="modes"><button class="mode" data-time="30">30 SECONDS</button><button class="mode active" data-time="60">1 MINUTE</button><button class="mode" data-time="300">5 MINUTES</button></div>
+<div class="status"><div class="timer" id="timer">1:00</div><div class="counter"><span id="count">0</span> 🍌</div></div>
+<div class="arena"><div class="tap" id="tap">PRESS ✕ TO BANANA</div><button class="bananaButton" id="banana" disabled><img class="character" src="chimpanzini-bananini.webp" alt="Chimpanzini Bananini"></button></div>
+<div class="controls"><button class="start" id="start">START 1 MINUTE</button><div class="hint">Mouse / touch: click • Controller: ✕ / South button • Keyboard: X or Space</div></div>
+<section class="leader"><h2>🏆 LEADERBOARD</h2><div class="tabs"><button class="tab" data-time="30">30 SEC</button><button class="tab active" data-time="60">1 MIN</button><button class="tab" data-time="300">5 MIN</button></div><div id="scores"></div></section>
+</div>
+<div class="overlay" id="result"><div class="card"><div class="trophy">🏆</div><div class="small" id="resultMode">1 MINUTE</div><div class="result"><span id="finalScore">0</span> BANANAS</div><div>TIME'S UP! ABSOLUTE BANANA GREATNESS.</div><input id="name" class="nameInput" maxlength="16" placeholder="Enter your name"><br><button class="again" id="save">SAVE SCORE</button></div></div>
+<script>
+let mode=60,count=0,running=false,endAt=0,timerId=null,audio=null,leaderMode=60;
+const banana=document.getElementById('banana'),countEl=document.getElementById('count'),timerEl=document.getElementById('timer'),start=document.getElementById('start'),tap=document.getElementById('tap'),overlay=document.getElementById('result'),finalScore=document.getElementById('finalScore'),nameInput=document.getElementById('name'),scores=document.getElementById('scores');
+function fmt(s){s=Math.max(0,Math.ceil(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
+function sound(){try{audio ||= new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=180+(count%20)*16;g.gain.setValueAtTime(.0001,audio.currentTime);g.gain.exponentialRampToValueAtTime(.10,audio.currentTime+.01);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.09);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+.1)}catch(e){}}
+function setMode(seconds){if(running)return;mode=seconds;document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',+b.dataset.time===seconds));start.textContent='START '+label(seconds);timerEl.textContent=fmt(seconds);count=0;countEl.textContent='0'}
+function label(s){return s===30?'30 SECONDS':s===60?'1 MINUTE':'5 MINUTES'}
+function begin(){count=0;countEl.textContent='0';running=true;banana.disabled=false;start.disabled=true;tap.textContent='PRESS ✕ TO BANANA';endAt=performance.now()+mode*1000;timerId=setInterval(tick,50);tick()}
+function tick(){const left=(endAt-performance.now())/1000;timerEl.textContent=fmt(left);if(left<=0)finish()}
+function clickBanana(){if(!running)return;count++;countEl.textContent=count;sound();banana.classList.remove('hit');void banana.offsetWidth;banana.classList.add('hit');const f=document.createElement('div');f.className='float';f.textContent='+1 🍌';f.style.left=(39+Math.random()*22)+'%';f.style.top=(38+Math.random()*15)+'%';document.querySelector('.arena').appendChild(f);setTimeout(()=>f.remove(),700);if(navigator.vibrate)navigator.vibrate(18)}
+function finish(){if(!running)return;running=false;clearInterval(timerId);timerId=null;banana.disabled=true;timerEl.textContent='0:00';tap.textContent='TIME!';finalScore.textContent=count;document.getElementById('resultMode').textContent=label(mode);overlay.style.display='grid';nameInput.value='';nameInput.focus();if(navigator.vibrate)navigator.vibrate([80,40,120])}
+const SUPABASE_URL='https://lbfmbikujuzfkcqdrbth.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_TMY98X8RMmzZFvLnJfmDBg__gLPX57n';
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+let leaderboardLoading=false;
+
+async function getScores(s){
+  try{
+    const {data,error}=await supabaseClient
+      .from('scores')
+      .select('player_name,score,created_at')
+      .eq('duration_seconds',s)
+      .order('score',{ascending:false})
+      .order('created_at',{ascending:true})
+      .limit(20);
+    if(error) throw error;
+    return data||[];
+  }catch(e){
+    console.error('Leaderboard load failed:',e);
+    return null;
+  }
+}
+
+async function saveScore(){
+  if(leaderboardLoading)return;
+  leaderboardLoading=true;
+  const saveBtn=document.getElementById('save');
+  saveBtn.disabled=true;
+  saveBtn.textContent='SAVING...';
+  let name=(nameInput.value.trim()||'Anonymous').slice(0,16);
+  try{
+    const {error}=await supabaseClient.from('scores').insert({
+      player_name:name,
+      score:count,
+      duration_seconds:mode
+    });
+    if(error)throw error;
+    overlay.style.display='none';
+    leaderMode=mode;
+    await renderScores();
+    resetReady();
+  }catch(e){
+    console.error('Score submission failed:',e);
+    alert('Could not save your score online. Check your internet connection and Supabase setup.');
+  }finally{
+    leaderboardLoading=false;
+    saveBtn.disabled=false;
+    saveBtn.textContent='SAVE SCORE';
+  }
+}
+
+function resetReady(){
+  count=0;countEl.textContent='0';timerEl.textContent=fmt(mode);
+  start.disabled=false;start.textContent='START '+label(mode);tap.textContent='PRESS ✕ TO BANANA'
+}
+
+async function renderScores(){
+  if(leaderboardLoading)return;
+  scores.innerHTML='<div class="empty">Loading global scores...</div>';
+  const arr=await getScores(leaderMode);
+  if(arr===null){
+    scores.innerHTML='<div class="empty">Leaderboard unavailable. Check your Supabase connection.</div>';
+    return;
+  }
+  if(!arr.length){
+    scores.innerHTML='<div class="empty">No scores yet. Be the first banana legend!</div>';
+    return;
+  }
+  scores.innerHTML=arr.map((x,i)=>`<div class="row"><div class="rank">${i<3?['🥇','🥈','🥉'][i]:i+1}</div><div>${escapeHtml(x.player_name)}</div><div class="score">${Number(x.score).toLocaleString()} 🍌</div></div>`).join('');
+}
+function escapeHtml(s){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(+b.dataset.time)));
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{leaderMode=+b.dataset.time;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));renderScores()}));
+start.addEventListener('click',begin);banana.addEventListener('click',clickBanana);document.getElementById('save').addEventListener('click',saveScore);nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')saveScore()});
+document.addEventListener('keydown',e=>{if((e.key==='x'||e.key==='X'||e.code==='Space')&&!e.repeat){e.preventDefault();if(!running && overlay.style.display!=='grid')begin();else clickBanana()}});setMode(60);renderScores();
+</script></body></html>
